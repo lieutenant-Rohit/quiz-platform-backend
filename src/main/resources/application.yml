@@ -1,0 +1,27 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: quiz-platform-backend
+
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/quiz_platform
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+logging:
+  level:
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+jwt:
+  secret: quiz-platform-secret-key-should-be-long
+  expiration: 3600000   # 1 hour (ms)
