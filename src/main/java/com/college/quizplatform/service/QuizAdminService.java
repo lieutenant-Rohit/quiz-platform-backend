@@ -28,6 +28,8 @@ public class QuizAdminService {
         Quiz quiz = Quiz.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
+                .marksPerQuestion(request.getMarksPerQuestion())
+                .negativeMarks(request.getNegativeMarks())
                 .questionIds(new ArrayList<>())
                 .active(true)
                 .createdAt(Instant.now())
@@ -39,44 +41,41 @@ public class QuizAdminService {
     // ================= ADD QUESTION =================
     public Question addQuestion(CreateQuestionRequest request) {
 
-        // 1️⃣ Check quiz exists
         Quiz quiz = quizRepository.findById(request.getQuizId())
-                .orElseThrow(() ->
-                        new RuntimeException("Quiz not found"));
+                .orElseThrow(() -> new RuntimeException("Quiz not found"));
 
-        // 2️⃣ Validate correctAnswerIndex
         if (request.getCorrectAnswerIndex() < 0 ||
                 request.getCorrectAnswerIndex() >= request.getOptions().size()) {
             throw new RuntimeException("Invalid correctAnswerIndex");
         }
 
-        // 3️⃣ Save question
         Question question = Question.builder()
                 .quizId(request.getQuizId())
                 .questionText(request.getQuestionText())
                 .options(request.getOptions())
                 .correctAnswerIndex(request.getCorrectAnswerIndex())
                 .category(request.getCategory())
+                .timeLimitSeconds(request.getTimeLimitSeconds())
                 .createdAt(Instant.now())
                 .build();
 
         Question savedQuestion = questionRepository.save(question);
 
-        // 4️⃣ Add question ID to quiz
         quiz.getQuestionIds().add(savedQuestion.getId());
         quizRepository.save(quiz);
 
         return savedQuestion;
     }
+
     // ================= GET QUIZ WITH QUESTIONS =================
     public QuizResponse getQuizById(String quizId) {
 
         Quiz quiz = quizRepository.findById(quizId)
                 .orElseThrow(() -> new RuntimeException("Quiz not found"));
 
-        var questions = questionRepository.findByQuizId(quizId);
+        List<Question> questions = questionRepository.findByQuizId(quizId);
 
-        var questionResponses = questions.stream()
+        List<QuestionResponse> questionResponses = questions.stream()
                 .map(q -> QuestionResponse.builder()
                         .id(q.getId())
                         .questionText(q.getQuestionText())
@@ -95,9 +94,8 @@ public class QuizAdminService {
                 .questions(questionResponses)
                 .build();
     }
-    public List<Quiz> getAllQuizzes() {
-        return quizRepository.findAll();
-    }
+
+    // ================= ENABLE / DISABLE QUIZ =================
     public Quiz toggleQuizStatus(String quizId, boolean active) {
 
         Quiz quiz = quizRepository.findById(quizId)
@@ -106,5 +104,61 @@ public class QuizAdminService {
         quiz.setActive(active);
 
         return quizRepository.save(quiz);
+    }
+
+    // ================= LIST ALL QUIZZES =================
+    public List<Quiz> getAllQuizzes() {
+        return quizRepository.findAll();
+    }
+
+    // ================= BULK ADD QUESTIONS =================
+    public List<Question> addQuestionsBulk(List<CreateQuestionRequest> requests) {
+
+        if (requests == null || requests.isEmpty()) {
+            throw new RuntimeException("Question list cannot be empty");
+        }
+
+        String quizId = requests.get(0).getQuizId();
+
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new RuntimeException("Quiz not found"));
+
+        List<Question> questionsToSave = new ArrayList<>();
+
+        for (CreateQuestionRequest request : requests) {
+
+            if (!quizId.equals(request.getQuizId())) {
+                throw new RuntimeException("All questions must belong to same quiz");
+            }
+
+            if (request.getCorrectAnswerIndex() < 0 ||
+                    request.getCorrectAnswerIndex() >= request.getOptions().size()) {
+                throw new RuntimeException("Invalid correctAnswerIndex");
+            }
+
+            Question question = Question.builder()
+                    .quizId(request.getQuizId())
+                    .questionText(request.getQuestionText())
+                    .options(request.getOptions())
+                    .correctAnswerIndex(request.getCorrectAnswerIndex())
+                    .category(request.getCategory())
+                    .timeLimitSeconds(request.getTimeLimitSeconds())
+                    .createdAt(Instant.now())
+                    .build();
+
+            questionsToSave.add(question);
+        }
+
+        // Save all at once
+        List<Question> savedQuestions = questionRepository.saveAll(questionsToSave);
+
+        // Update quiz questionIds
+        for (Question q : savedQuestions) {
+            quiz.getQuestionIds().add(q.getId());
+        }
+
+        quizRepository.save(quiz);
+
+        return savedQuestions;
     }
 }

@@ -1,9 +1,13 @@
 package com.college.quizplatform.service;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import com.college.quizplatform.dto.attempt.StartAttemptResponse;
 import com.college.quizplatform.dto.attempt.SubmitAnswerRequest;
 import com.college.quizplatform.model.Attempt;
 import com.college.quizplatform.model.Question;
+import com.college.quizplatform.model.Quiz;
 import com.college.quizplatform.model.QuizSession;
 import com.college.quizplatform.repository.AttemptRepository;
 import com.college.quizplatform.repository.QuestionRepository;
@@ -11,7 +15,7 @@ import com.college.quizplatform.repository.QuizSessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-
+import com.college.quizplatform.repository.QuizRepository;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -23,12 +27,15 @@ public class AttemptService {
     private final AttemptRepository attemptRepository;
     private final QuizSessionRepository sessionRepository;
     private final QuestionRepository questionRepository;
+    private final QuizRepository quizRepository;
 
+    // ================= START ATTEMPT =================
     // ================= START ATTEMPT =================
     public StartAttemptResponse startAttempt(String sessionId) {
 
         String studentId = SecurityContextHolder.getContext()
-                .getAuthentication().getName();
+                .getAuthentication()
+                .getName();
 
         QuizSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Session not found"));
@@ -52,6 +59,7 @@ public class AttemptService {
                 .quizId(session.getQuizId())
                 .studentId(studentId)
                 .answers(new HashMap<>())
+                .questionStartTimes(new HashMap<>())   // ✅ initialize here
                 .startedAt(Instant.now())
                 .submitted(false)
                 .score(0)
@@ -67,6 +75,7 @@ public class AttemptService {
     }
 
     // ================= SAVE ANSWER =================
+    // ================= SAVE ANSWER WITH PER-QUESTION TIMER =================
     public void submitAnswer(SubmitAnswerRequest request) {
 
         Attempt attempt = attemptRepository.findById(request.getAttemptId())
@@ -76,9 +85,39 @@ public class AttemptService {
             throw new RuntimeException("Attempt already submitted");
         }
 
+        QuizSession session = sessionRepository.findById(attempt.getSessionId())
+                .orElseThrow(() -> new RuntimeException("Session not found"));
+
+        // 🔒 Hard session-level time enforcement
+        if (Instant.now().isAfter(session.getScheduledEndTime()) || session.isEnded()) {
+            throw new RuntimeException("Session time expired");
+        }
+
         Question question = questionRepository.findById(request.getQuestionId())
                 .orElseThrow(() -> new RuntimeException("Question not found"));
 
+        // ================= PER-QUESTION TIMER LOGIC =================
+
+        // If first time answering this question → start timer
+        if (!attempt.getQuestionStartTimes().containsKey(request.getQuestionId())) {
+            attempt.getQuestionStartTimes()
+                    .put(request.getQuestionId(), Instant.now());
+        }
+
+        Instant startTime = attempt.getQuestionStartTimes()
+                .get(request.getQuestionId());
+
+        if (startTime != null && question.getTimeLimitSeconds() > 0) {
+
+            long secondsElapsed = Instant.now().getEpochSecond()
+                    - startTime.getEpochSecond();
+
+            if (secondsElapsed > question.getTimeLimitSeconds()) {
+                throw new RuntimeException("Question time expired");
+            }
+        }
+
+        // Save answer
         attempt.getAnswers().put(
                 request.getQuestionId(),
                 request.getSelectedOptionIndex()
@@ -87,6 +126,7 @@ public class AttemptService {
         attemptRepository.save(attempt);
     }
     // ================= SUBMIT ATTEMPT =================
+    // ================= SUBMIT ATTEMPT WITH NEGATIVE MARKING =================
     public int submitAttempt(String attemptId) {
 
         Attempt attempt = attemptRepository.findById(attemptId)
@@ -99,9 +139,8 @@ public class AttemptService {
         QuizSession session = sessionRepository.findById(attempt.getSessionId())
                 .orElseThrow(() -> new RuntimeException("Session not found"));
 
-        if (session.isEnded()) {
-            throw new RuntimeException("Session already ended");
-        }
+        Quiz quiz = quizRepository.findById(attempt.getQuizId())
+                .orElseThrow(() -> new RuntimeException("Quiz not found"));
 
         int score = 0;
 
@@ -111,8 +150,20 @@ public class AttemptService {
                     .orElseThrow(() -> new RuntimeException("Question not found"));
 
             if (question.getCorrectAnswerIndex() == entry.getValue()) {
-                score++;
+
+                // ✅ Correct answer
+                score += quiz.getMarksPerQuestion();
+
+            } else {
+
+                // ❌ Wrong answer (negative marking)
+                score -= quiz.getNegativeMarks();
             }
+        }
+
+        // Optional safety: prevent negative total score
+        if (score < 0) {
+            score = 0;
         }
 
         attempt.setScore(score);
@@ -126,6 +177,21 @@ public class AttemptService {
     public List<Attempt> getLeaderboard(String sessionId) {
         return attemptRepository
                 .findBySessionIdAndSubmittedTrueOrderByScoreDescSubmittedAtAsc(sessionId);
+    }
+    // ================= PAGINATED LEADERBOARD =================
+    public Page<Attempt> getLeaderboard(String sessionId, int page, int size) {
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(
+                        Sort.Order.desc("score"),
+                        Sort.Order.asc("submittedAt")
+                )
+        );
+
+        return attemptRepository
+                .findBySessionIdAndSubmittedTrue(sessionId, pageable);
     }
 
 

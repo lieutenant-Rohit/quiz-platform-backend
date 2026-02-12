@@ -27,5 +27,8 @@ public class Quiz {
 
     private boolean active;
 
+    private int marksPerQuestion;
+    private int negativeMarks;
+
     private Instant createdAt;
 }

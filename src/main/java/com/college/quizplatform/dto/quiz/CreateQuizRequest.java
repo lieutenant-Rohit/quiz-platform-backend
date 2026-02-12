@@ -11,5 +11,8 @@ public class CreateQuizRequest {
     @NotBlank
     private String title;
 
+    private int marksPerQuestion;
+    private int negativeMarks;
+
     private String description;
 }

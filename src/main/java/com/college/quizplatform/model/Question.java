@@ -30,5 +30,7 @@ public class Question {
 
     private String category;
 
+    private int timeLimitSeconds;
+
     private Instant createdAt;
 }

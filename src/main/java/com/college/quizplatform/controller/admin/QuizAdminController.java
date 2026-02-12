@@ -58,4 +58,11 @@ public class QuizAdminController {
 
         return quizAdminService.toggleQuizStatus(quizId, active);
     }
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/questions/bulk")
+    public List<Question> addQuestionsBulk(
+            @RequestBody List<CreateQuestionRequest> requests) {
+
+        return quizAdminService.addQuestionsBulk(requests);
+    }
 }

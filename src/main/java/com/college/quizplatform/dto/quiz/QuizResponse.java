@@ -17,4 +17,5 @@ public class QuizResponse {
     private Instant createdAt;
 
     private List<QuestionResponse> questions;
+
 }

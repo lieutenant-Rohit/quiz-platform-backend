@@ -24,5 +24,7 @@ public class CreateQuestionRequest {
 
     private int correctAnswerIndex;
 
+    private int timeLimitSeconds;
+
     private String category;
 }
