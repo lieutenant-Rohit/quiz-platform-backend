@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Quiz Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-gray-100 font-sans antialiased flex h-screen overflow-hidden">
+
+<aside class="w-64 bg-gray-900 text-white flex flex-col">
+    <div class="p-6 border-b border-gray-800">
+        <h2 class="text-2xl font-bold text-indigo-400">Admin Portal</h2>
+        <p class="text-sm text-gray-400 mt-1" id="adminEmailDisplay">admin@example.com</p>
+    </div>
+    <nav class="flex-1 px-4 py-6 space-y-2">
+        <button onclick="switchView('quizzesView')" class="w-full flex items-center px-4 py-3 bg-indigo-600 rounded-lg text-left hover:bg-indigo-500 transition-colors" id="nav-quizzes">
+            <i class="bi bi-card-list me-3"></i> Manage Quizzes
+        </button>
+        <button onclick="switchView('sessionsView')" class="w-full flex items-center px-4 py-3 rounded-lg text-left hover:bg-gray-800 transition-colors text-gray-300" id="nav-sessions">
+            <i class="bi bi-stopwatch me-3"></i> Quiz Sessions
+        </button>
+        <button onclick="switchView('resultsView')" class="w-full flex items-center px-4 py-3 rounded-lg text-left hover:bg-gray-800 transition-colors text-gray-300" id="nav-results">
+            <i class="bi bi-trophy me-3"></i> Leaderboards
+        </button>
+    </nav>
+    <div class="p-4 border-t border-gray-800">
+        <button onclick="logout()" class="w-full flex items-center px-4 py-2 text-red-400 hover:bg-gray-800 rounded-lg transition-colors">
+            <i class="bi bi-box-arrow-right me-3"></i> Logout
+        </button>
+    </div>
+</aside>
+
+<main class="flex-1 overflow-y-auto p-8">
+
+    <div id="quizzesView" class="view-section">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">Manage Quizzes</h1>
+            <button onclick="document.getElementById('createQuizForm').classList.toggle('hidden')" class="bg-indigo-600 text-white px-4 py-2 rounded shadow hover:bg-indigo-700">
+                <i class="bi bi-plus-lg"></i> Create New Quiz
+            </button>
+        </div>
+
+        <div id="createQuizForm" class="hidden bg-white p-6 rounded-lg shadow-sm border mb-6">
+            <h3 class="font-bold text-lg mb-4">Create a New Quiz</h3>
+            <form id="newQuizForm" class="flex gap-4 items-end">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700">Quiz Title</label>
+                    <input type="text" id="quizTitle" required class="mt-1 block w-full border border-gray-300 rounded p-2 focus:ring-indigo-500">
+                </div>
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700">Topic</label>
+                    <input type="text" id="quizTopic" required class="mt-1 block w-full border border-gray-300 rounded p-2">
+                </div>
+                <div class="w-24">
+                    <label class="block text-sm font-medium text-gray-700">Duration (m)</label>
+                    <input type="number" id="quizDuration" required class="mt-1 block w-full border border-gray-300 rounded p-2">
+                </div>
+                <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">Save</button>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Topic</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+                </thead>
+                <tbody id="quizzesTableBody" class="bg-white divide-y divide-gray-200">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="manageQuestionsView" class="view-section hidden">
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <button onclick="switchView('quizzesView')" class="text-indigo-600 hover:text-indigo-800 text-sm font-semibold mb-2">
+                    <i class="bi bi-arrow-left"></i> Back to Quizzes
+                </button>
+                <h1 class="text-3xl font-bold text-gray-800" id="currentQuizTitle">Quiz Details</h1>
+                <p class="text-gray-500 text-sm mt-1">Quiz ID: <span id="currentQuizIdDisplay"></span></p>
+            </div>
+            <button onclick="document.getElementById('addQuestionFormContainer').classList.toggle('hidden')" class="bg-indigo-600 text-white px-4 py-2 rounded shadow hover:bg-indigo-700">
+                <i class="bi bi-plus-lg"></i> Add Question
+            </button>
+        </div>
+
+        <div id="addQuestionFormContainer" class="hidden bg-white p-6 rounded-lg shadow-sm border mb-6">
+            <h3 class="font-bold text-lg mb-4">Add New Question</h3>
+            <form id="addQuestionForm" class="space-y-4">
+                <input type="hidden" id="q_quizId">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Question Text</label>
+                    <textarea id="q_text" required class="mt-1 block w-full border border-gray-300 rounded p-2 focus:ring-indigo-500" rows="2"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Option 1</label>
+                        <input type="text" id="q_opt1" required class="mt-1 block w-full border border-gray-300 rounded p-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Option 2</label>
+                        <input type="text" id="q_opt2" required class="mt-1 block w-full border border-gray-300 rounded p-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Option 3</label>
+                        <input type="text" id="q_opt3" required class="mt-1 block w-full border border-gray-300 rounded p-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Option 4</label>
+                        <input type="text" id="q_opt4" required class="mt-1 block w-full border border-gray-300 rounded p-2">
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-700">Correct Option (1-4)</label>
+                        <select id="q_correct" required class="mt-1 block w-full border border-gray-300 rounded p-2">
+                            <option value="1">Option 1</option>
+                            <option value="2">Option 2</option>
+                            <option value="3">Option 3</option>
+                            <option value="4">Option 4</option>
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-700">Marks</label>
+                        <input type="number" id="q_marks" value="1" required class="mt-1 block w-full border border-gray-300 rounded p-2">
+                    </div>
+                </div>
+
+                <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 w-full mt-4">Save Question</button>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border p-4">
+            <h4 class="font-bold text-gray-700 mb-4 border-b pb-2">Existing Questions</h4>
+            <div id="questionsList" class="space-y-4">
+            </div>
+        </div>
+    </div>
+
+    <div id="sessionsView" class="view-section hidden">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">Quiz Sessions</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <div class="bg-white p-6 rounded-lg shadow-sm border">
+                <h3 class="font-bold mb-4 text-indigo-700"><i class="bi bi-plus-circle me-2"></i>Create New Session</h3>
+                <form id="createSessionForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Select Quiz ID</label>
+                        <input type="text" id="sessionQuizId" required placeholder="Enter Quiz ID..." class="mt-1 block w-full border border-gray-300 rounded p-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Session Name</label>
+                        <input type="text" id="sessionName" required placeholder="e.g. Midterm Exam" class="mt-1 block w-full border border-gray-300 rounded p-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Scheduled Start Time</label>
+                        <input type="datetime-local" id="sessionStartTime" required class="mt-1 block w-full border border-gray-300 rounded p-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Scheduled End Time</label>
+                        <input type="datetime-local" id="sessionEndTime" required class="mt-1 block w-full border border-gray-300 rounded p-2">
+                    </div>
+                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 w-full">Generate Session</button>
+                </form>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-sm border">
+                <h3 class="font-bold mb-4 text-orange-600"><i class="bi bi-sliders me-2"></i>Manage Active Session</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Enter Session ID to Manage</label>
+                        <input type="text" id="manageSessionId" placeholder="e.g. sess_12345" class="mt-1 block w-full border border-gray-300 rounded p-2">
+                    </div>
+                    <div class="flex gap-4 mt-4">
+                        <button onclick="changeSessionState('start')" class="flex-1 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-semibold">
+                            <i class="bi bi-play-fill"></i> Start Session
+                        </button>
+                        <button onclick="changeSessionState('end')" class="flex-1 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 font-semibold">
+                            <i class="bi bi-stop-fill"></i> End Session
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="resultsView" class="view-section hidden">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">Leaderboard & Results</h1>
+        <div class="bg-white p-6 rounded-lg shadow-sm border max-w-xl mb-6 flex gap-4">
+            <input type="text" id="resultSessionId" placeholder="Enter Session ID..." class="flex-1 border border-gray-300 rounded p-2">
+            <button onclick="fetchResults()" class="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700">Fetch</button>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Score</th>
+                </tr>
+                </thead>
+                <tbody id="resultsTableBody" class="bg-white divide-y divide-gray-200">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>

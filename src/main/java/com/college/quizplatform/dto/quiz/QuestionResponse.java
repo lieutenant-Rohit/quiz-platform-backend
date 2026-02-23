@@ -12,6 +12,9 @@ public class QuestionResponse {
     private String id;
     private String questionText;
     private List<String> options;
-    private int correctAnswerIndex; // Admin can see
+
+    // Admin uses this to verify correct answers in the dashboard
+    private int correctAnswerIndex;
+
     private String category;
 }

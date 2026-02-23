@@ -14,7 +14,6 @@ import java.util.Date;
 public class JwtTokenProvider {
 
     private final Key signingKey;
-
     private final long expiration;
 
     public JwtTokenProvider(
@@ -29,13 +28,12 @@ public class JwtTokenProvider {
      * Generate JWT Token
      */
     public String generateToken(CustomUserDetails userDetails) {
-
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expiration);
 
         return Jwts.builder()
-                .setSubject(userDetails.getUserId())     // userId
-                .claim("role", userDetails.getRole())    // ROLE_ADMIN / ROLE_STUDENT
+                .setSubject(userDetails.getUserId()) // FIX: Using DB ID for Subject
+                .claim("role", userDetails.getAuthorities().iterator().next().getAuthority())
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(signingKey, SignatureAlgorithm.HS256)

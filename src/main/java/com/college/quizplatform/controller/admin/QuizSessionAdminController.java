@@ -15,7 +15,7 @@ public class QuizSessionAdminController {
 
     private final QuizSessionService sessionService;
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     @PostMapping
     public QuizSession createSession(
             @Valid @RequestBody CreateSessionRequest request) {
@@ -23,13 +23,13 @@ public class QuizSessionAdminController {
         return sessionService.createSession(request);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     @PostMapping("/start/{sessionId}")
     public QuizSession startSession(@PathVariable String sessionId) {
         return sessionService.startSession(sessionId);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     @PostMapping("/end/{sessionId}")
     public QuizSession endSession(@PathVariable String sessionId) {
         return sessionService.endSession(sessionId);

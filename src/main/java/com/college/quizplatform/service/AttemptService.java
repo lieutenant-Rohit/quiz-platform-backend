@@ -1,8 +1,5 @@
 package com.college.quizplatform.service;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+
 import com.college.quizplatform.dto.attempt.StartAttemptResponse;
 import com.college.quizplatform.dto.attempt.SubmitAnswerRequest;
 import com.college.quizplatform.model.Attempt;
@@ -11,11 +8,15 @@ import com.college.quizplatform.model.Quiz;
 import com.college.quizplatform.model.QuizSession;
 import com.college.quizplatform.repository.AttemptRepository;
 import com.college.quizplatform.repository.QuestionRepository;
+import com.college.quizplatform.repository.QuizRepository;
 import com.college.quizplatform.repository.QuizSessionRepository;
+import com.college.quizplatform.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.*;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import com.college.quizplatform.repository.QuizRepository;
+
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -30,28 +31,35 @@ public class AttemptService {
     private final QuizRepository quizRepository;
 
     // ================= START ATTEMPT =================
-    // ================= START ATTEMPT =================
     public StartAttemptResponse startAttempt(String sessionId) {
 
-        String studentId = SecurityContextHolder.getContext()
-                .getAuthentication()
-                .getName();
+        // SECURE EXTRACTION: Get the current authenticated student
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof CustomUserDetails userDetails)) {
+            throw new RuntimeException("User not authenticated properly");
+        }
+
+        // Use the getUserId() method we added to CustomUserDetails
+        String studentId = userDetails.getUserId();
 
         QuizSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Session not found"));
 
-        if (!session.isStarted() || session.isEnded()) {
-            throw new RuntimeException("Session not active");
+        Instant now = Instant.now();
+
+        // Validate timing
+        if (now.isBefore(session.getScheduledStartTime())) {
+            throw new RuntimeException("Session has not started yet");
         }
 
-        if (Instant.now().isBefore(session.getScheduledStartTime()) ||
-                Instant.now().isAfter(session.getScheduledEndTime())) {
-            throw new RuntimeException("Outside time window");
+        if (now.isAfter(session.getScheduledEndTime()) || session.isEnded()) {
+            throw new RuntimeException("Session already ended or expired");
         }
 
+        // Prevent multiple attempts for the same student in one session
         attemptRepository.findBySessionIdAndStudentId(sessionId, studentId)
                 .ifPresent(a -> {
-                    throw new RuntimeException("Attempt already exists");
+                    throw new RuntimeException("You have already started this quiz.");
                 });
 
         Attempt attempt = Attempt.builder()
@@ -59,8 +67,8 @@ public class AttemptService {
                 .quizId(session.getQuizId())
                 .studentId(studentId)
                 .answers(new HashMap<>())
-                .questionStartTimes(new HashMap<>())   // ✅ initialize here
-                .startedAt(Instant.now())
+                .questionStartTimes(new HashMap<>())
+                .startedAt(now)
                 .submitted(false)
                 .score(0)
                 .build();
@@ -75,7 +83,6 @@ public class AttemptService {
     }
 
     // ================= SAVE ANSWER =================
-    // ================= SAVE ANSWER WITH PER-QUESTION TIMER =================
     public void submitAnswer(SubmitAnswerRequest request) {
 
         Attempt attempt = attemptRepository.findById(request.getAttemptId())
@@ -88,45 +95,35 @@ public class AttemptService {
         QuizSession session = sessionRepository.findById(attempt.getSessionId())
                 .orElseThrow(() -> new RuntimeException("Session not found"));
 
-        // 🔒 Hard session-level time enforcement
-        if (Instant.now().isAfter(session.getScheduledEndTime()) || session.isEnded()) {
+        Instant now = Instant.now();
+
+        if (now.isAfter(session.getScheduledEndTime()) || session.isEnded()) {
             throw new RuntimeException("Session time expired");
         }
 
         Question question = questionRepository.findById(request.getQuestionId())
                 .orElseThrow(() -> new RuntimeException("Question not found"));
 
-        // ================= PER-QUESTION TIMER LOGIC =================
-
-        // If first time answering this question → start timer
+        // Question-level timer logic
         if (!attempt.getQuestionStartTimes().containsKey(request.getQuestionId())) {
-            attempt.getQuestionStartTimes()
-                    .put(request.getQuestionId(), Instant.now());
+            attempt.getQuestionStartTimes().put(request.getQuestionId(), now);
         }
 
-        Instant startTime = attempt.getQuestionStartTimes()
-                .get(request.getQuestionId());
+        Instant startTime = attempt.getQuestionStartTimes().get(request.getQuestionId());
 
         if (startTime != null && question.getTimeLimitSeconds() > 0) {
-
-            long secondsElapsed = Instant.now().getEpochSecond()
-                    - startTime.getEpochSecond();
-
+            long secondsElapsed = now.getEpochSecond() - startTime.getEpochSecond();
             if (secondsElapsed > question.getTimeLimitSeconds()) {
-                throw new RuntimeException("Question time expired");
+                throw new RuntimeException("Time limit for this question has expired.");
             }
         }
 
-        // Save answer
-        attempt.getAnswers().put(
-                request.getQuestionId(),
-                request.getSelectedOptionIndex()
-        );
-
+        // Update answer map
+        attempt.getAnswers().put(request.getQuestionId(), request.getSelectedOptionIndex());
         attemptRepository.save(attempt);
     }
+
     // ================= SUBMIT ATTEMPT =================
-    // ================= SUBMIT ATTEMPT WITH NEGATIVE MARKING =================
     public int submitAttempt(String attemptId) {
 
         Attempt attempt = attemptRepository.findById(attemptId)
@@ -136,63 +133,47 @@ public class AttemptService {
             throw new RuntimeException("Already submitted");
         }
 
-        QuizSession session = sessionRepository.findById(attempt.getSessionId())
-                .orElseThrow(() -> new RuntimeException("Session not found"));
-
         Quiz quiz = quizRepository.findById(attempt.getQuizId())
                 .orElseThrow(() -> new RuntimeException("Quiz not found"));
 
         int score = 0;
 
+        // Scoring logic
         for (var entry : attempt.getAnswers().entrySet()) {
-
             Question question = questionRepository.findById(entry.getKey())
-                    .orElseThrow(() -> new RuntimeException("Question not found"));
+                    .orElseThrow(() -> new RuntimeException("Question data missing"));
 
+            // Check if the selected option matches the correct answer index
             if (question.getCorrectAnswerIndex() == entry.getValue()) {
-
-                // ✅ Correct answer
                 score += quiz.getMarksPerQuestion();
-
             } else {
-
-                // ❌ Wrong answer (negative marking)
                 score -= quiz.getNegativeMarks();
             }
         }
 
-        // Optional safety: prevent negative total score
-        if (score < 0) {
-            score = 0;
-        }
+        if (score < 0) score = 0;
 
         attempt.setScore(score);
         attempt.setSubmitted(true);
         attempt.setSubmittedAt(Instant.now());
 
         attemptRepository.save(attempt);
-
         return score;
     }
+
+    // ================= LEADERBOARD =================
     public List<Attempt> getLeaderboard(String sessionId) {
         return attemptRepository
                 .findBySessionIdAndSubmittedTrueOrderByScoreDescSubmittedAtAsc(sessionId);
     }
-    // ================= PAGINATED LEADERBOARD =================
-    public Page<Attempt> getLeaderboard(String sessionId, int page, int size) {
 
+    public Page<Attempt> getLeaderboard(String sessionId, int page, int size) {
         Pageable pageable = PageRequest.of(
                 page,
                 size,
-                Sort.by(
-                        Sort.Order.desc("score"),
-                        Sort.Order.asc("submittedAt")
-                )
+                Sort.by(Sort.Order.desc("score"), Sort.Order.asc("submittedAt"))
         );
 
-        return attemptRepository
-                .findBySessionIdAndSubmittedTrue(sessionId, pageable);
+        return attemptRepository.findBySessionIdAndSubmittedTrue(sessionId, pageable);
     }
-
-
 }

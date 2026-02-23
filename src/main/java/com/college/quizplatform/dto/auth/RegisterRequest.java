@@ -2,6 +2,7 @@ package com.college.quizplatform.dto.auth;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -22,5 +23,7 @@ public class RegisterRequest {
 
     // ADMIN or STUDENT
     @NotBlank(message = "Role is required")
+    // FIX: Added pattern matching to prevent illegal role exceptions
+    @Pattern(regexp = "^(ADMIN|STUDENT)$", message = "Role must be exactly ADMIN or STUDENT")
     private String role;
 }

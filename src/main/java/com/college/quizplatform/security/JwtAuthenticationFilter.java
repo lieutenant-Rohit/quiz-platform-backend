@@ -1,11 +1,13 @@
 package com.college.quizplatform.security;
 
+import com.college.quizplatform.service.CustomUserDetailsService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -19,56 +21,53 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final com.college.quizplatform.security.CustomUserDetailsService userDetailsService;
+    // Simplified the reference since they are in the same package
+    private final CustomUserDetailsService userDetailsService;
 
     @Override
     protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
 
-        // Check if Authorization header is present and valid
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-
             String token = authHeader.substring(7);
 
             try {
-                // Extract claims
+                // 1. Validate and extract claims
                 Claims claims = jwtTokenProvider.getClaimsFromToken(token);
-
-                // Subject contains userId
                 String userId = claims.getSubject();
 
-                // Load user using userId
-                CustomUserDetails userDetails =
-                        userDetailsService.loadUserById(userId);
+                if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                // Create authentication object
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
+                    // 2. Load user using the specific loadUserById we updated
+                    CustomUserDetails userDetails = userDetailsService.loadUserById(userId);
 
-                authentication.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
+                    // 3. Create authentication token with userDetails as the Principal
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
 
-                // Set authentication in context
-                SecurityContextHolder.getContext()
-                        .setAuthentication(authentication);
+                    authentication.setDetails(
+                            new WebAuthenticationDetailsSource().buildDetails(request)
+                    );
+
+                    // 4. Set the security context
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
 
             } catch (Exception ex) {
-                // Invalid token → clear context
+                // If token is invalid or expired, ensure context is clear
                 SecurityContextHolder.clearContext();
             }
         }
 
-        // Continue filter chain
         filterChain.doFilter(request, response);
     }
 }

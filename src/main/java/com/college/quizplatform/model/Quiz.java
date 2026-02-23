@@ -20,7 +20,13 @@ public class Quiz {
 
     private String title;
 
+    // NEW: Added topic to match CreateQuizRequest
+    private String topic;
+
     private String description;
+
+    // NEW: Added duration for the quiz timer (in minutes)
+    private int duration;
 
     // Store question IDs (not full objects)
     private List<String> questionIds;
@@ -29,6 +35,9 @@ public class Quiz {
 
     private int marksPerQuestion;
     private int negativeMarks;
+
+    // NEW: Added totalMarks field used in your Service
+    private int totalMarks;
 
     private Instant createdAt;
 }

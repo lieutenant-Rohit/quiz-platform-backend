@@ -32,6 +32,7 @@ public class AuthService {
             throw new RuntimeException("Email already registered");
         }
 
+        // Ensuring role matches the Enum format ROLE_ADMIN or ROLE_STUDENT
         Role role = Role.valueOf("ROLE_" + request.getRole().toUpperCase());
 
         User user = User.builder()
@@ -47,23 +48,34 @@ public class AuthService {
     }
 
     // ================= LOGIN (STEP 8) =================
+    // Updated login method with basic error handling
     public LoginResponse login(LoginRequest request) {
+        try {
+            // 1. Authenticate using Spring Security
+            var authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
+                    )
+            );
 
-        // Authenticate using Spring Security
-        var authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
-                )
-        );
+            // 2. Extract authenticated user details
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 
-        // Extract authenticated user
-        CustomUserDetails userDetails =
-                (CustomUserDetails) authentication.getPrincipal();
+            // 3. Generate JWT Token
+            String token = jwtTokenProvider.generateToken(userDetails);
 
-        // Generate JWT
-        String token = jwtTokenProvider.generateToken(userDetails);
+            // 4. Extract the user's role string (e.g., "ROLE_ADMIN")
+            String role = userDetails.getAuthorities().iterator().next().getAuthority();
 
-        return new LoginResponse(token);
+            // 5. Extract name for the Frontend Dashboard
+            String name = userDetails.getName();
+
+            return new LoginResponse(token, role, name);
+
+        } catch (org.springframework.security.core.AuthenticationException e) {
+            // This ensures the frontend receives a 401 Unauthorized instead of a 500
+            throw new RuntimeException("Invalid email or password");
+        }
     }
 }

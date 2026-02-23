@@ -21,48 +21,48 @@ public class QuizAdminController {
     private final QuizAdminService quizAdminService;
 
     // ================= CREATE QUIZ =================
-    @PreAuthorize("hasRole('ADMIN')")
+    // FIX: Changed from hasRole to hasAnyAuthority
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     @PostMapping
     public Quiz createQuiz(@Valid @RequestBody CreateQuizRequest request) {
         return quizAdminService.createQuiz(request);
     }
 
     // ================= ADD QUESTION =================
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     @PostMapping("/questions")
     public Question addQuestion(
             @Valid @RequestBody CreateQuestionRequest request) {
-
         return quizAdminService.addQuestion(request);
     }
+
     // ================= GET QUIZ =================
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     @GetMapping("/{quizId}")
     public QuizResponse getQuiz(@PathVariable String quizId) {
         return quizAdminService.getQuizById(quizId);
     }
 
     // ================= LIST QUIZZES =================
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     @GetMapping
     public List<Quiz> listQuizzes() {
         return quizAdminService.getAllQuizzes();
     }
 
     // ================= ENABLE/DISABLE QUIZ =================
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     @PutMapping("/{quizId}/status")
     public Quiz toggleStatus(
             @PathVariable String quizId,
             @RequestParam boolean active) {
-
         return quizAdminService.toggleQuizStatus(quizId, active);
     }
-    @PreAuthorize("hasRole('ADMIN')")
+
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     @PostMapping("/questions/bulk")
     public List<Question> addQuestionsBulk(
             @RequestBody List<CreateQuestionRequest> requests) {
-
         return quizAdminService.addQuestionsBulk(requests);
     }
 }

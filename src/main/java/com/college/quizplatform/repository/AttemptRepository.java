@@ -19,4 +19,7 @@ public interface AttemptRepository extends MongoRepository<Attempt, String> {
     );
 
     List<Attempt> findBySessionIdAndSubmittedTrueOrderByScoreDescSubmittedAtAsc(String sessionId);
+
+    // FIX: Added method to fetch only active attempts for the auto-submit job
+    List<Attempt> findBySubmittedFalse();
 }

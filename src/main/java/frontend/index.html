@@ -1,206 +1,55 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Live Classroom Quiz</title>
-    <meta charset="UTF-8" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Quiz Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+
+    <link rel="stylesheet" href="css/style.css">
 </head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased min-h-screen flex items-center justify-center">
 
-<body class="bg-light">
-
-<div class="container mt-4">
-    <h2 class="text-center mb-4">🎓 Live Classroom Quiz</h2>
-
-    <!-- LOGIN -->
-    <div id="loginSection" class="card p-4 mb-3">
-        <h5>Login</h5>
-        <input id="email" class="form-control mb-2" placeholder="Email"/>
-        <input id="password" type="password" class="form-control mb-2" placeholder="Password"/>
-        <button class="btn btn-primary w-100" onclick="login()">Login</button>
-        <div id="loginError" class="text-danger mt-2"></div>
+<div class="max-w-md w-full bg-white rounded-xl shadow-lg p-8 m-4">
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-indigo-600 mb-2">Quiz Platform</h1>
+        <p class="text-gray-500">Sign in to access your dashboard</p>
     </div>
 
-    <!-- STUDENT PANEL -->
-    <div id="studentPanel" style="display:none">
+    <div id="errorMessage" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded" role="alert">
+        <p id="errorText" class="text-sm"></p>
+    </div>
 
-        <div class="card p-3 mb-3">
-            <h5>Start Quiz</h5>
-            <input id="studentSessionId" class="form-control mb-2" placeholder="Session ID"/>
-            <button class="btn btn-success w-100" onclick="startAttempt()">Start Attempt</button>
+    <form id="loginForm" class="space-y-6">
+        <div>
+            <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
+            <input type="email" id="email" required
+                   class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
         </div>
 
-        <div id="quizContainer" style="display:none">
-            <div class="card p-4">
-                <div class="d-flex justify-content-between">
-                    <h5 id="quizTitle"></h5>
-                    <span class="badge bg-danger" id="timer">00:00</span>
-                </div>
-                <hr>
-                <div id="questionsArea"></div>
-                <button class="btn btn-primary w-100 mt-3" onclick="submitQuiz()">Submit Quiz</button>
-            </div>
+        <div>
+            <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+            <input type="password" id="password" required
+                   class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
         </div>
+
+        <button type="submit" id="loginBtn"
+                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+            Sign In
+        </button>
+    </form>
+
+    <div class="mt-6 text-center">
+        <p class="text-sm text-gray-600">
+            Don't have an account?
+            <a href="register.html" class="font-medium text-indigo-600 hover:text-indigo-500">Register here</a>
+        </p>
     </div>
 </div>
 
-<script>
-
-    const API = "http://localhost:8080";
-
-    let token = null;
-    let role = null;
-    let attemptId = null;
-    let quizId = null;
-    let timerInterval;
-    let totalTime = 600;
-
-    // ================= LOGIN =================
-    async function login() {
-
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-
-        const res = await fetch(API + "/auth/login", {
-            method: "POST",
-            headers: {"Content-Type":"application/json"},
-            body: JSON.stringify({email,password})
-        });
-
-        if(!res.ok){
-            document.getElementById("loginError").innerText="Invalid credentials";
-            return;
-        }
-
-        const data = await res.json();
-        token = data.token;
-
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        role = payload.role;
-
-        if(role !== "ROLE_STUDENT"){
-            alert("Please login as student");
-            return;
-        }
-
-        document.getElementById("loginSection").style.display="none";
-        document.getElementById("studentPanel").style.display="block";
-    }
-
-    // ================= START ATTEMPT =================
-    async function startAttempt(){
-
-        const sessionId = document.getElementById("studentSessionId").value;
-
-        if(!sessionId){
-            alert("Enter Session ID");
-            return;
-        }
-
-        console.log("Using session:", sessionId);
-        console.log("Token:", token);
-
-        const res = await fetch(API + "/student/attempts/start/" + sessionId, {
-            method: "POST",
-            headers: {
-                "Authorization": "Bearer " + token
-            }
-        });
-
-        if(!res.ok){
-            const text = await res.text();
-            alert("Start failed: " + text);
-            return;
-        }
-
-        const data = await res.json();
-        attemptId = data.attemptId;
-        quizId = data.quizId;
-
-        loadQuiz();
-        startTimer();
-    }
-
-    // ================= LOAD QUIZ =================
-    async function loadQuiz(){
-
-        const res = await fetch(API + "/student/quizzes/" + quizId, {
-            headers: {
-                "Authorization": "Bearer " + token
-            }
-        });
-
-        if(!res.ok){
-            alert("Failed to load quiz");
-            return;
-        }
-
-        const quiz = await res.json();
-
-        document.getElementById("quizContainer").style.display="block";
-        document.getElementById("quizTitle").innerText=quiz.title;
-
-        const container=document.getElementById("questionsArea");
-        container.innerHTML="";
-
-        quiz.questions.forEach(q=>{
-            container.innerHTML+=`
-            <div class="mb-3">
-                <strong>${q.questionText}</strong>
-                ${q.options.map((opt,i)=>`
-                    <div>
-                        <input type="radio" name="${q.id}"
-                               onchange="saveAnswer('${q.id}',${i})"> ${opt}
-                    </div>`).join("")}
-            </div>
-        `;
-        });
-    }
-
-    // ================= SAVE ANSWER =================
-    async function saveAnswer(questionId,index){
-
-        await fetch(API+"/student/attempts/answer",{
-            method:"POST",
-            headers:{
-                "Content-Type":"application/json",
-                "Authorization":"Bearer "+token
-            },
-            body:JSON.stringify({
-                attemptId:attemptId,
-                questionId:questionId,
-                selectedOptionIndex:index
-            })
-        });
-    }
-
-    // ================= SUBMIT QUIZ =================
-    async function submitQuiz(){
-
-        const res=await fetch(API+"/student/attempts/submit/"+attemptId,{
-            method:"POST",
-            headers:{ "Authorization":"Bearer "+token }
-        });
-
-        const score=await res.text();
-        clearInterval(timerInterval);
-        alert("Your Score: "+score);
-    }
-
-    // ================= TIMER =================
-    function startTimer(){
-        timerInterval=setInterval(()=>{
-            let min=Math.floor(totalTime/60);
-            let sec=totalTime%60;
-            document.getElementById("timer").innerText=min+":"+(sec<10?"0":"")+sec;
-            totalTime--;
-            if(totalTime<0){
-                clearInterval(timerInterval);
-                submitQuiz();
-            }
-        },1000);
-    }
-
-</script>
-
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
 </body>
 </html>

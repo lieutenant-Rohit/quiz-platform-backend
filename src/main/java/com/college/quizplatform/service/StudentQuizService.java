@@ -23,8 +23,8 @@ public class StudentQuizService {
         Quiz quiz = quizRepository.findById(quizId)
                 .orElseThrow(() -> new RuntimeException("Quiz not found"));
 
-        List<Question> questions =
-                questionRepository.findAllById(quiz.getQuestionIds());
+        // Safer query method
+        List<Question> questions = questionRepository.findByQuizId(quizId);
 
         List<QuestionResponse> safeQuestions =
                 questions.stream()
@@ -39,6 +39,8 @@ public class StudentQuizService {
         return QuizResponse.builder()
                 .id(quiz.getId())
                 .title(quiz.getTitle())
+                .topic(quiz.getTopic()) // FIX: Added
+                .duration(quiz.getDuration()) // FIX: Added
                 .description(quiz.getDescription())
                 .active(quiz.isActive())
                 .createdAt(quiz.getCreatedAt())

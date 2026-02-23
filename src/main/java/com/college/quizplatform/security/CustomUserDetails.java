@@ -6,7 +6,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
-import java.util.List;
+import java.util.Collections;
 
 public class CustomUserDetails implements UserDetails {
 
@@ -16,17 +16,20 @@ public class CustomUserDetails implements UserDetails {
         this.user = user;
     }
 
+    // Returns the MongoDB document ID for the student
     public String getUserId() {
         return user.getId();
     }
 
-    public String getRole() {
-        return user.getRole().name();
+    public String getName() {
+        return user.getName();
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(user.getRole().name()));
+        return Collections.singletonList(
+                new SimpleGrantedAuthority(user.getRole().name())
+        );
     }
 
     @Override
@@ -39,8 +42,15 @@ public class CustomUserDetails implements UserDetails {
         return user.getEmail();
     }
 
-    @Override public boolean isAccountNonExpired() { return true; }
-    @Override public boolean isAccountNonLocked() { return true; }
-    @Override public boolean isCredentialsNonExpired() { return true; }
-    @Override public boolean isEnabled() { return user.isEnabled(); }
+    @Override
+    public boolean isAccountNonExpired() { return true; }
+
+    @Override
+    public boolean isAccountNonLocked() { return true; }
+
+    @Override
+    public boolean isCredentialsNonExpired() { return true; }
+
+    @Override
+    public boolean isEnabled() { return user.isEnabled(); }
 }

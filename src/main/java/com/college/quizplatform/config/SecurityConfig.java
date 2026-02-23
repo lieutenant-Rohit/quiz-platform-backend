@@ -8,6 +8,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,8 +31,9 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-                .csrf(csrf -> csrf.disable())
-                .cors(cors -> {}) // enable CORS
+                .csrf(AbstractHttpConfigurer::disable)
+                // Fixed: Ensure the custom CORS source below is linked
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
@@ -40,11 +42,11 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
-                        // Admin endpoints
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        // Admin endpoints - Using hasAnyAuthority to avoid ROLE_ prefix issues
+                        .requestMatchers("/admin/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
 
-                        // Student endpoints
-                        .requestMatchers("/student/**").hasRole("STUDENT")
+                        // Student endpoints - Using hasAnyAuthority to avoid ROLE_ prefix issues
+                        .requestMatchers("/student/**").hasAnyAuthority("ROLE_STUDENT", "STUDENT")
 
                         .anyRequest().authenticated()
                 )
@@ -54,40 +56,34 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // Password Encoder (ONLY defined once in entire project)
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // Authentication Manager
     @Bean
     public AuthenticationManager authenticationManager(
             AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
-    // FINAL UNIVERSAL CORS CONFIG (Safari Safe)
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Allow all origins safely (for development)
+        // Allow all origins safely for development
         configuration.setAllowedOriginPatterns(List.of("*"));
 
-        // Allow all HTTP methods
+        // Allow all standard methods
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 
-        // Allow all headers
+        // Allow all headers (Crucial for Authorization header)
         configuration.setAllowedHeaders(List.of("*"));
 
-        // IMPORTANT: false avoids strict credential-origin conflict
+        // Set to true only if allowedOrigins is specific (not "*")
         configuration.setAllowCredentials(false);
 
-        UrlBasedCorsConfigurationSource source =
-                new UrlBasedCorsConfigurationSource();
-
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
 
         return source;

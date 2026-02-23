@@ -14,7 +14,7 @@ public class AttemptAdminController {
 
     private final AttemptService attemptService;
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     @GetMapping("/{sessionId}")
     public Page<Attempt> leaderboard(
             @PathVariable String sessionId,
