@@ -1,59 +1,300 @@
 /* css/style.css */
 
-/* --- 1. Custom Scrollbar --- */
-/* Makes the browser scrollbar look modern and sleek */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: #f1f5f9; /* Tailwind slate-100 */
-}
-
-::-webkit-scrollbar-thumb {
-    background: #cbd5e1; /* Tailwind slate-300 */
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8; /* Tailwind slate-400 */
-}
-
-/* --- 2. Global Smooth Scrolling --- */
+/* ==========================================================================
+   1. GLOBAL PHYSICS & SMOOTHING
+   ========================================================================== */
 html {
     scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 }
 
-/* --- 3. View Transitions (Used in the Admin Dashboard) --- */
-/* Adds a smooth fade-in effect when switching between views */
-.view-section {
-    animation: fadeIn 0.3s ease-in-out;
+body {
+    background-color: #f8fafc; /* slate-50 */
+    overflow-x: hidden;
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+::selection {
+    background-color: #4f46e5; /* indigo-600 */
+    color: #ffffff;
 }
 
-/* --- 4. Custom Glassmorphism Utility (Optional) --- */
-/* You can add class="glass" to any div to make it look like frosted glass */
-.glass {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+/* ==========================================================================
+   2. STAGGERED ENTRANCE ANIMATIONS (Form Loading & Dashboards)
+   ========================================================================== */
+.max-w-md > div,
+form > div,
+form > button,
+.mt-8.text-center,
+main .grid > div {
+    animation: fadeSlideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* --- 5. Radio Button Polish (For the Quiz Attempt UI) --- */
-/* Makes the radio buttons look slightly nicer when selected */
-input[type="radio"]:checked + label {
-    color: #4f46e5; /* Tailwind indigo-600 */
-    font-weight: 600;
+.max-w-md > div:first-child { animation-delay: 0.05s; }
+form > div:nth-child(1) { animation-delay: 0.1s; }
+form > div:nth-child(2) { animation-delay: 0.15s; }
+form > div:nth-child(3) { animation-delay: 0.2s; }
+form > div:nth-child(4) { animation-delay: 0.25s; }
+form > button { animation-delay: 0.3s; }
+.mt-8.text-center { animation-delay: 0.35s; }
+
+/* Dashboard grid card stagger */
+main .grid > div:nth-child(1) { animation-delay: 0.1s; }
+main .grid > div:nth-child(2) { animation-delay: 0.2s; }
+main .grid > div:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes fadeSlideUp {
+    0% { opacity: 0; transform: translateY(15px); }
+    100% { opacity: 1; transform: translateY(0); }
 }
+
+/* ==========================================================================
+   3. AMBIENT BACKGROUND PHYSICS (Left Dark Side)
+   ========================================================================== */
+.bg-slate-900 .border-\[40px\] {
+    animation: floatAmbient 18s ease-in-out infinite alternate;
+}
+
+.bg-slate-900 .blur-3xl {
+    animation: floatAmbient 12s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes floatAmbient {
+    0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+    50% { transform: translate(-20px, 15px) scale(1.05) rotate(2deg); }
+    100% { transform: translate(10px, -15px) scale(0.95) rotate(-2deg); }
+}
+
+/* ==========================================================================
+   4. TACTILE FINTECH INPUTS
+   ========================================================================== */
+input:not([type="radio"]), select, textarea {
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important; /* slate-300 */
+    border-radius: 0.5rem !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    color: #0f172a !important;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03) inset !important;
+}
+
+input:not([type="radio"]):hover, select:hover, textarea:hover {
+    border-color: #94a3b8 !important;
+    background-color: #f8fafc !important;
+}
+
+input:not([type="radio"]):focus, select:focus, textarea:focus {
+    border-color: #4f46e5 !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15), 0 1px 2px 0 rgba(0, 0, 0, 0.05) inset !important;
+    transform: translateY(-1px);
+    outline: none !important;
+}
+
+/* ==========================================================================
+   5. FORM GROUP INTERACTION (Form Polish)
+   ========================================================================== */
+form > div {
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+form > div:focus-within {
+    transform: translateX(6px);
+}
+
+form > div label {
+    transition: color 0.3s ease;
+}
+
+form > div:focus-within label {
+    color: #4f46e5 !important;
+}
+
+/* Dashboard specific Join Quiz form nudge */
+form#joinSessionForm {
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+form#joinSessionForm:focus-within {
+    transform: translateX(4px);
+}
+
+/* ==========================================================================
+   6. PREMIUM LINK HOVER EFFECTS
+   ========================================================================== */
+form a, .text-center a {
+    position: relative;
+    text-decoration: none;
+    padding-bottom: 2px;
+}
+
+form a::after, .text-center a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 1.5px;
+    bottom: 0;
+    left: 0;
+    background-color: currentColor;
+    transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+form a:hover::after, .text-center a:hover::after {
+    width: 100%;
+}
+
+/* ==========================================================================
+   7. UNIVERSAL MAGNETIC BUTTONS & DASHBOARD ACTIONS
+   ========================================================================== */
+/* Targets all primary action buttons across the app */
+button.bg-slate-900,
+button.bg-indigo-600,
+button.bg-green-600,
+button.bg-red-600,
+.bg-red-50.text-red-600 /* End Test Button */ {
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+/* The glossy sheen sweep effect across dark buttons */
+button.bg-slate-900::before, button.bg-indigo-600::before, button.bg-green-600::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+    transform: skewX(-20deg);
+    transition: left 0.6s ease;
+}
+
+/* Hover Liftoff */
+button.bg-slate-900:hover,
+button.bg-indigo-600:hover,
+button.bg-green-600:hover,
+button.bg-red-600:hover,
+.bg-red-50.text-red-600:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -4px rgba(0, 0, 0, 0.05) !important;
+}
+
+button.bg-slate-900:hover::before, button.bg-indigo-600:hover::before, button.bg-green-600:hover::before {
+    left: 150%;
+}
+
+/* Deep click compression */
+button:active {
+    transform: scale(0.95) translateY(0) !important;
+    box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ==========================================================================
+   8. DASHBOARD CARDS & SIDEBAR POLISH
+   ========================================================================== */
+/* Levitation effect for dashboard cards */
+main .bg-white.rounded-xl, main .bg-white.rounded-lg {
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+main .bg-white.rounded-xl:hover, main .bg-white.rounded-lg:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.08), 0 4px 10px -4px rgba(0, 0, 0, 0.04) !important;
+    border-color: #cbd5e1;
+}
+
+/* Sidebar navigation interactions */
+aside nav button {
+    transition: all 0.2s ease-in-out !important;
+}
+
+aside nav button i {
+    display: inline-block;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+aside nav button:hover i {
+    transform: translateX(4px) scale(1.1); /* Nudges the icon right and slightly enlarges it */
+    color: #818cf8; /* Tailwind indigo-400 glow */
+}
+
+/* ==========================================================================
+   9. QUIZ ENGINE OPTION CARDS & RADIO BUTTONS
+   ========================================================================== */
+#optionsContainer > div {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border: 1px solid #e2e8f0 !important;
+    background-color: #ffffff !important;
+    cursor: pointer;
+}
+
+#optionsContainer > div:hover {
+    border-color: #cbd5e1 !important;
+    background-color: #f8fafc !important;
+    transform: translateX(4px);
+}
+
+#optionsContainer > div:has(input[type="radio"]:checked) {
+    background-color: #f0fdf4 !important; /* Light green success feel */
+    border-color: #22c55e !important;
+    transform: translateX(8px);
+    box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.1);
+}
+
+input[type="radio"] {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    border: 2px solid #94a3b8 !important;
+    border-radius: 50% !important;
+    position: relative;
+    cursor: pointer;
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+}
+
+input[type="radio"]:checked { border-color: #22c55e !important; }
+
+input[type="radio"]::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0.6rem;
+    height: 0.6rem;
+    background-color: #22c55e;
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+input[type="radio"]:checked::after { transform: translate(-50%, -50%) scale(1); }
+
+/* ==========================================================================
+   10. ALERTS, TABLES & SCROLLBAR
+   ========================================================================== */
+#errorMessage, #successMessage {
+    animation: toastDrop 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    transform-origin: top;
+}
+
+@keyframes toastDrop {
+    from { opacity: 0; transform: translateY(-15px) scaleY(0.9); }
+    to { opacity: 1; transform: translateY(0) scaleY(1); }
+}
+
+tbody tr { transition: all 0.2s ease !important; cursor: default; }
+tbody tr:hover {
+    background-color: #f8fafc !important;
+    transform: scale(1.01);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    z-index: 10;
+    position: relative;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; border: 2px solid #f8fafc; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
