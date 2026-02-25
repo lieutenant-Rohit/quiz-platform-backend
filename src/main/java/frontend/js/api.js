@@ -1,5 +1,5 @@
 // js/api.js
-const BASE_URL = 'http://localhost:8080'; // Change this if your Spring Boot runs on a different port
+const BASE_URL = 'https://quiz-platform-api-1sdr.onrender.com'; // Change this if your Spring Boot runs on a different port
 
 const api = {
     request: async (endpoint, method = 'GET', body = null) => {
